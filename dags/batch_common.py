@@ -1,5 +1,6 @@
 import hashlib
 import json
+import logging
 import math
 import os
 import re
@@ -12,6 +13,8 @@ import numpy as np
 FEATURES = ["age", "tenure_months", "monthly_spend", "support_tickets_30d"]
 LIMITS = [(18, 100), (0, 240), (0, 10000), (0, 100)]
 ARTIFACTS = Path(os.environ.get("BATCH_ARTIFACTS", "/opt/airflow/include/artifacts"))
+
+log = logging.getLogger(__name__)
 
 
 def canonical(value):
@@ -102,7 +105,14 @@ def predict(rows, model):
 
 
 def infer_batches(rows, model, batch_size):
-    raise NotImplementedError("Задание 3: infer_batches")
+    if type(batch_size) is not int or not 1 <= batch_size <= 1000:
+        raise ValueError(f"Invalid batch_size: {batch_size!r}")
+    predictions = []
+    for number, start in enumerate(range(0, len(rows), batch_size), start=1):
+        batch = rows[start:start + batch_size]
+        log.info("Batch %d: %d rows", number, len(batch))
+        predictions.extend(predict(batch, model))
+    return predictions
 
 
 def validate_predictions(predictions, expected_ids):
