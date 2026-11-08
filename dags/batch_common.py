@@ -138,4 +138,14 @@ def validate_predictions(predictions, expected_ids):
 
 
 def replace_day(conn, day, model_version, predictions):
-    raise NotImplementedError("Задание 5: replace_day")
+    if not predictions:
+        raise ValueError("Empty predictions")
+    values = [(day, model_version, item["customer_id"], item["score"], item["label"]) for item in predictions]
+    with conn.transaction(), conn.cursor() as cur:
+        cur.execute("SELECT pg_advisory_xact_lock(hashtextextended(%s, 0))", (day + ":" + model_version,))
+        cur.execute("DELETE FROM predictions WHERE business_date = %s AND model_version = %s", (day, model_version))
+        cur.executemany(
+            "INSERT INTO predictions (business_date, model_version, customer_id, score, label) "
+            "VALUES (%s, %s, %s, %s, %s)",
+            values,
+        )
