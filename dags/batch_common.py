@@ -116,7 +116,25 @@ def infer_batches(rows, model, batch_size):
 
 
 def validate_predictions(predictions, expected_ids):
-    raise NotImplementedError("Задание 4: validate_predictions")
+    if not isinstance(predictions, list) or len(predictions) != len(expected_ids):
+        raise ValueError("Predictions count mismatch")
+    expected = set(expected_ids)
+    seen = set()
+    for item in predictions:
+        if not isinstance(item, dict):
+            raise ValueError(f"Prediction must be an object: {item!r}")
+        # get, потому что здесь и на отсутствие ключа нужен ValueError, а не KeyError
+        customer_id, score, label = item.get("customer_id"), item.get("score"), item.get("label")
+        if not isinstance(customer_id, str) or customer_id not in expected:
+            raise ValueError(f"Unexpected customer_id: {customer_id!r}")
+        if customer_id in seen:
+            raise ValueError(f"Duplicate customer_id: {customer_id}")
+        seen.add(customer_id)
+        # NaN и inf не проходят это сравнение, отдельный isfinite не нужен
+        if type(score) not in (int, float) or not 0 <= score <= 1:
+            raise ValueError(f"Invalid score for {customer_id}: {score!r}")
+        if type(label) is not int or label != int(score >= 0.5):
+            raise ValueError(f"Invalid label for {customer_id}: {label!r}")
 
 
 def replace_day(conn, day, model_version, predictions):
