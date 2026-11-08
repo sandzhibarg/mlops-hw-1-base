@@ -53,7 +53,30 @@ def business_date(explicit, interval_start):
 
 
 def validate_rows(rows, day):
-    raise NotImplementedError("Задание 2: validate_rows")
+    if not isinstance(rows, list) or not rows:
+        raise ValueError("Rows must be a non-empty list")
+    seen = set()
+    for row in rows:
+        if not isinstance(row, dict):
+            raise ValueError(f"Row must be an object: {row!r}")
+        customer_id = row["customer_id"]
+        if not isinstance(customer_id, str) or not customer_id.strip():
+            raise ValueError(f"Invalid customer_id: {customer_id!r}")
+        if customer_id in seen:
+            raise ValueError(f"Duplicate customer_id: {customer_id}")
+        seen.add(customer_id)
+        if row["business_date"] != day:
+            raise ValueError(f"Wrong business_date for {customer_id}: {row['business_date']!r}")
+        for name, (low, high) in zip(FEATURES, LIMITS):
+            value = row[name]
+            # type а не isinstance, потому что bool это подкласс int
+            if type(value) not in (int, float):
+                raise ValueError(f"Feature {name} of {customer_id} is not a number: {value!r}")
+            if type(value) is float and not math.isfinite(value):
+                raise ValueError(f"Feature {name} of {customer_id} is not finite: {value!r}")
+            if not low <= value <= high:
+                raise ValueError(f"Feature {name} of {customer_id} is out of range: {value!r}")
+    return rows
 
 
 def validate_model(model):
